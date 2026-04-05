@@ -37,16 +37,12 @@ Soniox API를 사용한 OBS Studio 실시간 자막 플러그인입니다.
 <summary><b>macOS</b></summary>
 
 1. `soniox-caption-obs-x.x.x-macos-arm64.zip` 다운로드 후 압축 해제
-2. `soniox-caption-obs.plugin` 을 아래 경로로 복사:
-   ```
-   ~/Library/Application Support/obs-studio/plugins/
-   ```
-3. OBS Studio 재시작
+2. OBS 메뉴 → **File** → **Show Settings Folder** 클릭
+3. 열린 폴더에서 **plugins** 폴더로 이동
+4. `soniox-caption-obs.plugin` 을 **plugins** 폴더에 복사
+5. OBS Studio 재시작
 
-**제거:**
-```bash
-rm -rf ~/Library/Application\ Support/obs-studio/plugins/soniox-caption-obs.plugin
-```
+**제거:** OBS 메뉴 → **File** → **Show Settings Folder** → **plugins** 폴더에서 `soniox-caption-obs.plugin` 삭제
 </details>
 
 <details>

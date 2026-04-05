@@ -37,16 +37,12 @@ Sign up at [soniox.com](https://soniox.com), register a payment method, add cred
 <summary><b>macOS</b></summary>
 
 1. Download and unzip `soniox-caption-obs-x.x.x-macos-arm64.zip`
-2. Copy `soniox-caption-obs.plugin` to:
-   ```
-   ~/Library/Application Support/obs-studio/plugins/
-   ```
-3. Restart OBS Studio
+2. In OBS, go to **File** → **Show Settings Folder**
+3. Open the **plugins** folder
+4. Copy `soniox-caption-obs.plugin` into the **plugins** folder
+5. Restart OBS Studio
 
-**Uninstall:**
-```bash
-rm -rf ~/Library/Application\ Support/obs-studio/plugins/soniox-caption-obs.plugin
-```
+**Uninstall:** In OBS, go to **File** → **Show Settings Folder** → **plugins** folder → delete `soniox-caption-obs.plugin`
 </details>
 
 <details>
