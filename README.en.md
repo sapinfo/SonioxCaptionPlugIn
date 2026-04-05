@@ -19,7 +19,7 @@ Real-time speech-to-text captions for OBS Studio using the [Soniox](https://soni
 
 ### 1. Get Soniox API Key
 
-Sign up at [soniox.com](https://soniox.com) and get your API key (free tier available).
+Sign up at [soniox.com](https://soniox.com), register a payment method, add credits, and get your API key.
 
 ### 2. Download
 

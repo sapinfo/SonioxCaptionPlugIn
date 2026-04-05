@@ -19,7 +19,7 @@ Soniox API를 사용한 OBS Studio 실시간 자막 플러그인입니다.
 
 ### 1. Soniox API 키 발급
 
-[soniox.com](https://soniox.com) 에서 가입 후 API 키를 발급받으세요 (무료 플랜 있음).
+[soniox.com](https://soniox.com) 에서 가입 후 결제 수단 등록 및 크레딧 충전 후 API 키를 발급받으세요.
 
 ### 2. 다운로드
 
