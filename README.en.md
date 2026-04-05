@@ -6,6 +6,20 @@ Real-time speech-to-text captions for OBS Studio using the [Soniox](https://soni
 
 ---
 
+## What is Soniox?
+
+[Soniox](https://soniox.com) is a best-in-class real-time speech-to-text (STT) API.
+
+- **Speed**: 249ms median latency — top of the industry
+- **Accuracy**: 1.29% Word Error Rate (WER) — best-in-class precision
+- **60+ languages**: Same accuracy and speed for Korean, Japanese, Chinese, and all non-English languages. Most competitors are "English-first" with accuracy dropping dramatically for other languages
+- **Code-switching**: Automatically handles mid-sentence language switching (e.g., Korean → English)
+- **Real-time translation**: Streaming translation for 3,600+ language pairs
+- **Advanced endpointing**: Uses tone and meaning — not just silence — to detect when a speaker is done
+
+> *"Most 'industry leaders' are English-first. Their accuracy drops off a cliff the moment you move into other languages. Soniox is the only speech API provider you can use today to build voice agents for all 8 billion people on Earth."*
+> — [Soniox Blog](https://soniox.com/blog/soniox-named-best-in-class-for-voice-agents)
+
 ## Features
 
 - Real-time speech-to-text (Soniox stt-rt-v4 model)

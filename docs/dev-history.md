@@ -296,9 +296,91 @@ display = original + "\n" + translation;
 | 4 | WebSocket connection to Soniox | ✅ Done | 2026-04-05 |
 | 5+6 | Audio capture + token parsing + display | ✅ Done | 2026-04-05 |
 | 7 | Translation support | ✅ Done | 2026-04-05 |
-| 8 | Cross-platform build + GitHub release | ⬜ Next | - |
-| 9 | Dock panel UI | ⬜ Planned | - |
-| 10 | Auto-reconnect | ⬜ Planned | - |
+| 8 | Cross-platform build + GitHub release | ✅ Done | 2026-04-05 |
+| 9 | Hotkey toggle (Start/Stop) | ✅ Done | 2026-04-05 |
+| 10 | Auto-reconnect | ✅ Done | 2026-04-05 |
+| 11 | Dock panel UI | ⏸️ Blocked | AGL framework 호환 문제 |
+
+---
+
+## Step 8: GitHub CI/CD + Release
+
+**목표**: push 시 macOS/Windows/Linux 자동 빌드 + Release 생성
+
+### 무엇을 했나
+1. obs-plugintemplate 기본 GitHub Actions 활용 (push.yaml, build-project.yaml)
+2. `.Brewfile`에 OpenSSL 추가 (CI에서 IXWebSocket TLS 빌드용)
+3. macOS CI를 Universal → arm64 전용으로 변경 (Homebrew OpenSSL이 arm64 only)
+4. `build-macos` 스크립트에서 `-arch x86_64` 제거
+5. `git tag 0.1.0` → 자동 Release 생성 (draft → publish)
+6. macOS .plugin zip을 수동으로 Release에 업로드
+
+### 배운 것
+- obs-plugintemplate에 CI/CD가 이미 포함되어 있음 (GitHub Actions)
+- 태그(`git tag x.x.x`)를 push하면 자동으로 Release가 생성됨 (draft 상태)
+- `gh release edit --draft=false`로 공개 전환
+- Homebrew는 Universal 빌드를 지원하지 않음 → arm64 전용으로 전환
+- macOS `.pkg` 생성에는 Apple Developer 인증서($99/년)가 필요 → zip 배포로 대체
+- CI 빌드 스크립트(`build-macos`)에 아키텍처가 하드코딩되어 있을 수 있음 → 확인 필요
+
+### 트러블슈팅
+- **CI x86_64 링크 실패**: CMakePresets.json만 변경으로는 부족, `build-macos` 스크립트에 `-arch x86_64`가 하드코딩 → 제거
+- **gh CLI 인증**: `gh auth login -p https -w` → 브라우저에서 device code 입력
+
+---
+
+## Step 9: 핫키 토글
+
+**목표**: Properties 열지 않고 단축키로 자막 시작/중지
+
+### 핵심 코드
+```cpp
+// 소스 생성 시 핫키 등록
+data->hotkey_id = obs_hotkey_register_source(source, "soniox_toggle_caption",
+    "Toggle Soniox Captions", hotkey_toggle_caption, data);
+```
+
+OBS Settings → Hotkeys에서 키를 할당하면 Properties 없이 토글 가능.
+
+---
+
+## Step 10: 자동 재연결
+
+**목표**: 네트워크 끊김 시 자동 재시도
+
+### 핵심 코드
+```cpp
+data->websocket->enableAutomaticReconnection();
+data->websocket->setMinWaitBetweenReconnectionRetries(3000);   // 3초
+data->websocket->setMaxWaitBetweenReconnectionRetries(30000);  // 최대 30초
+```
+
+IXWebSocket 내장 기능 — 별도 구현 불필요.
+
+---
+
+## Step 11: Dock 패널 (보류)
+
+**목표**: OBS 하단/측면에 항상 보이는 Start/Stop 패널
+
+**보류 사유**: OBS Frontend API + Qt 활성화 시 macOS 26.x에서 `AGL` 프레임워크 미발견 에러. OBS SDK 31.1.1이 최신 macOS와 호환되지 않음. OBS SDK 업데이트 후 재시도 예정.
+
+---
+
+## 전체 진행 상황
+
+| Step | Description | Status | Date |
+|------|-------------|--------|------|
+| 1 | Skeleton plugin (load/unload) | ✅ Done | 2026-04-05 |
+| 2 | Register text source in OBS | ✅ Done | 2026-04-05 |
+| 3 | Properties UI (API key, language, font) | ✅ Done | 2026-04-05 |
+| 4 | WebSocket connection to Soniox | ✅ Done | 2026-04-05 |
+| 5+6 | Audio capture + token parsing + display | ✅ Done | 2026-04-05 |
+| 7 | Translation support | ✅ Done | 2026-04-05 |
+| 8 | CI/CD + GitHub Release v0.1.0 | ✅ Done | 2026-04-05 |
+| 9 | Hotkey toggle | ✅ Done | 2026-04-05 |
+| 10 | Auto-reconnect | ✅ Done | 2026-04-05 |
+| 11 | Dock panel UI | ⏸️ Blocked | AGL 호환 문제 |
 
 ## 빌드 치트시트
 
@@ -315,4 +397,8 @@ cp -R build_macos/RelWithDebInfo/soniox-caption-obs.plugin \
 
 # 소스 파일 추가/삭제 시 (가끔)
 rm -rf build_macos && cmake --preset macos
+
+# Release 만들기
+git tag x.x.x && git push origin x.x.x
+# → GitHub Actions가 자동 빌드 + Release 생성
 ```
