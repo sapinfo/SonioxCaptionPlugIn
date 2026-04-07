@@ -5,11 +5,11 @@
 | Item | Detail |
 |------|--------|
 | Plugin Name | soniox-caption-obs |
-| Version | 0.1.0 |
+| Version | 0.1.1 |
 | Language | C++ (C++17) |
 | Build System | CMake 3.28+ |
 | OBS SDK | 31.1.1 |
-| Platforms | macOS (arm64), Windows (x64), Linux (x86_64) |
+| Platforms | macOS (arm64, x86_64), Windows (x64), Linux (x86_64) |
 | License | TBD (Open Source) |
 | Dependencies | IXWebSocket (WebSocket), nlohmann/json (JSON), OpenSSL (TLS) |
 
@@ -63,6 +63,19 @@ cp -R build_macos/RelWithDebInfo/soniox-caption-obs.plugin \
 
 # Uninstall
 rm -rf ~/Library/Application\ Support/obs-studio/plugins/soniox-caption-obs.plugin
+```
+
+### macOS (Intel)
+
+```bash
+# Intel Mac에서 직접 빌드
+cmake --preset macos
+cmake --build --preset macos
+
+# CI에서는 Apple Silicon 런너에서 크로스컴파일:
+# - CMake preset: macos-ci-x86_64
+# - Intel Homebrew OpenSSL: /usr/local/opt/openssl@3
+# - xcodebuild -arch x86_64
 ```
 
 ### Windows (x64)
@@ -190,6 +203,8 @@ cmake --build --preset ubuntu-x86_64
 | 5 | Audio capture + streaming | Done |
 | 6 | Token parsing + text display | Done |
 | 7 | Translation support | Done |
-| 8 | Cross-platform build + GitHub release | Next |
-| 9 | Dock panel UI (Start/Stop without Properties) | Planned |
-| 10 | Auto-reconnect on disconnect | Planned |
+| 8 | Cross-platform build + GitHub release | Done (v0.1.0) |
+| 8.1 | Intel Mac (x86_64) CI + Release | Done (v0.1.1) |
+| 9 | Hotkey toggle (Start/Stop) | Done |
+| 10 | Auto-reconnect on disconnect | Done |
+| 11 | Dock panel UI | Blocked (AGL framework) |

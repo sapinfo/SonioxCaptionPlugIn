@@ -378,9 +378,78 @@ IXWebSocket 내장 기능 — 별도 구현 불필요.
 | 5+6 | Audio capture + token parsing + display | ✅ Done | 2026-04-05 |
 | 7 | Translation support | ✅ Done | 2026-04-05 |
 | 8 | CI/CD + GitHub Release v0.1.0 | ✅ Done | 2026-04-05 |
+| 8.1 | Intel Mac CI + Release v0.1.1 | ✅ Done | 2026-04-07 |
 | 9 | Hotkey toggle | ✅ Done | 2026-04-05 |
 | 10 | Auto-reconnect | ✅ Done | 2026-04-05 |
 | 11 | Dock panel UI | ⏸️ Blocked | AGL 호환 문제 |
+
+---
+
+## Step 8.1: Intel Mac (x86_64) CI 빌드 + Release v0.1.1
+
+**목표**: Apple Silicon뿐 아니라 Intel Mac에서도 실행 가능한 빌드 제공
+
+### 무엇을 했나
+1. `push.yaml` — `branches` 섹션 제거 (태그 push만 빌드, main push 시 Actions 실행 안 함)
+2. `build-project.yaml` — `macos-x86_64-build` job 추가 (Apple Silicon 런너에서 크로스컴파일)
+3. `CMakePresets.json` — `macos-ci-x86_64` preset 추가 (Intel Homebrew OpenSSL 경로)
+4. `build-macos` 스크립트 — `--arch` 옵션 추가, x86_64일 때 Intel Homebrew로 OpenSSL 설치
+5. `package-macos` 스크립트 — `--arch` 옵션 추가, output 파일명에 아키텍처 반영
+6. `build-plugin/action.yaml`, `package-plugin/action.yaml` — target에서 arch 추출하여 전달
+7. `CMakeLists.txt` — `OPENSSL_ROOT_DIR` 가드 추가 (`NOT DEFINED CACHE{OPENSSL_ROOT_DIR}`)
+
+### 핵심 문제: arm64 런너에서 x86_64 크로스컴파일 시 OpenSSL 링크 실패
+
+```
+ld: symbol(s) not found for architecture x86_64
+  "_SSL_connect", "_SSL_read", "_SSL_write" ... (OpenSSL 심볼들)
+```
+
+**원인**: macOS-15 런너는 Apple Silicon(arm64). `brew --prefix openssl`이 `/opt/homebrew/opt/openssl@3` (arm64)을 반환. CMakeLists.txt에서 이 경로를 `FORCE`로 설정하여 preset의 x86_64 경로를 덮어씀.
+
+**해결**:
+1. CMakeLists.txt에 `NOT DEFINED CACHE{OPENSSL_ROOT_DIR}` 가드 추가 → preset 값 보존
+2. `macos-ci-x86_64` preset에 `OPENSSL_ROOT_DIR: "/usr/local/opt/openssl@3"` 명시
+3. `build-macos` 스크립트에서 x86_64 빌드 시 Intel Homebrew (`/usr/local/bin/brew`) 설치 후 OpenSSL 설치
+
+```cmake
+# Before (문제)
+if(APPLE)
+  execute_process(COMMAND brew --prefix openssl ...)
+  set(OPENSSL_ROOT_DIR "${OPENSSL_ROOT_DIR}" CACHE PATH "" FORCE)
+
+# After (수정)
+if(APPLE AND NOT DEFINED CACHE{OPENSSL_ROOT_DIR})
+  execute_process(COMMAND brew --prefix openssl ...)
+  set(OPENSSL_ROOT_DIR "${OPENSSL_ROOT_DIR}" CACHE PATH "" FORCE)
+```
+
+### 배운 것
+- GitHub Actions macos-15 런너 = Apple Silicon (arm64). Intel 빌드는 크로스컴파일
+- Apple Silicon Mac에는 Homebrew가 2개 공존 가능: `/opt/homebrew/bin/brew` (arm64), `/usr/local/bin/brew` (x86_64)
+- Intel Homebrew 설치: `arch -x86_64 /bin/bash -c "$(curl -fsSL .../install.sh)"`
+- CMake `CACHE{VAR}` — preset에서 설정한 cache 변수가 존재하는지 확인 가능 (CMake 3.21+)
+- `FORCE` 키워드를 무분별하게 사용하면 preset/CI 설정을 덮어씀 → 가드 조건 필수
+- main push에서 빌드 실행 방지: `on.push.branches` 제거하고 `on.push.tags`만 유지
+
+### CI 워크플로우 구조 (v0.1.1)
+
+```
+push.yaml (태그 push만 트리거)
+  ├── build-project.yaml
+  │   ├── check-event        — 이벤트 분석 (codesign, notarize, package 여부)
+  │   ├── macos-build        — Apple Silicon (arm64) 빌드 + 코드사인
+  │   ├── macos-x86_64-build — Intel (x86_64) 크로스컴파일 (코드사인 없음)
+  │   ├── ubuntu-build       — Ubuntu x86_64 빌드
+  │   └── windows-build      — Windows x64 빌드
+  └── create-release         — draft Release 생성 + artifact 첨부
+```
+
+### 결과
+- v0.1.1 릴리스: macOS arm64 + x86_64 + Windows x64 + Ubuntu x86_64 빌드 성공 ✓
+- main push 시 Actions 실행 안 됨 ✓
+
+---
 
 ## 빌드 치트시트
 
