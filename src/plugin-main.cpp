@@ -529,7 +529,7 @@ static bool on_test_clicked(obs_properties_t *, obs_property_t *, void *private_
 	return false;
 }
 
-static bool on_start_stop_clicked(obs_properties_t *, obs_property_t *, void *private_data)
+static bool on_start_stop_clicked(obs_properties_t *, obs_property_t *property, void *private_data)
 {
 	auto *data = static_cast<soniox_caption_data *>(private_data);
 
@@ -543,8 +543,10 @@ static bool on_start_stop_clicked(obs_properties_t *, obs_property_t *, void *pr
 
 	if (data->captioning) {
 		stop_captioning(data);
+		obs_property_set_description(property, "Start Caption");
 	} else {
 		start_captioning(data);
+		obs_property_set_description(property, "Stop Caption");
 	}
 	return true;
 }
