@@ -5,7 +5,7 @@
 | Item | Detail |
 |------|--------|
 | Plugin Name | soniox-caption-obs |
-| Version | 0.1.1 |
+| Version | 0.1.2 |
 | Language | C++ (C++17) |
 | Build System | CMake 3.28+ |
 | OBS SDK | 31.1.1 |
@@ -205,6 +205,7 @@ cmake --build --preset ubuntu-x86_64
 | 7 | Translation support | Done |
 | 8 | Cross-platform build + GitHub release | Done (v0.1.0) |
 | 8.1 | Intel Mac (x86_64) CI + Release | Done (v0.1.1) |
+| 8.2 | Button text toggle fix | Done (v0.1.2) |
 | 9 | Hotkey toggle (Start/Stop) | Done |
 | 10 | Auto-reconnect on disconnect | Done |
 | 11 | Dock panel UI | Blocked (AGL framework) |

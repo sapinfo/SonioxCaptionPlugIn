@@ -379,6 +379,7 @@ IXWebSocket 내장 기능 — 별도 구현 불필요.
 | 7 | Translation support | ✅ Done | 2026-04-05 |
 | 8 | CI/CD + GitHub Release v0.1.0 | ✅ Done | 2026-04-05 |
 | 8.1 | Intel Mac CI + Release v0.1.1 | ✅ Done | 2026-04-07 |
+| 8.2 | Button text toggle fix v0.1.2 | ✅ Done | 2026-04-07 |
 | 9 | Hotkey toggle | ✅ Done | 2026-04-05 |
 | 10 | Auto-reconnect | ✅ Done | 2026-04-05 |
 | 11 | Dock panel UI | ⏸️ Blocked | AGL 호환 문제 |
@@ -448,6 +449,41 @@ push.yaml (태그 push만 트리거)
 ### 결과
 - v0.1.1 릴리스: macOS arm64 + x86_64 + Windows x64 + Ubuntu x86_64 빌드 성공 ✓
 - main push 시 Actions 실행 안 됨 ✓
+
+---
+
+## Step 8.2: 버튼 텍스트 토글 수정 (v0.1.2)
+
+**목표**: Start/Stop 버튼 클릭 후 텍스트가 즉시 변경되도록 수정
+
+### 문제
+`on_start_stop_clicked` 콜백에서 `return true` → `RefreshProperties()` 호출 → 기존 properties 객체에서 UI 재빌드. 하지만 `get_properties()`는 다시 호출되지 않으므로 조건부 텍스트 설정이 반영되지 않음.
+
+### 해결
+콜백의 두 번째 파라미터에 `property` 이름을 부여하고, `obs_property_set_description()`으로 직접 버튼 텍스트를 변경.
+
+```cpp
+// Before: obs_property_t * (unnamed)
+// After:  obs_property_t *property
+
+if (data->captioning) {
+    stop_captioning(data);
+    obs_property_set_description(property, "Start Caption");
+} else {
+    start_captioning(data);
+    obs_property_set_description(property, "Stop Caption");
+}
+```
+
+### OBS 내부 동작
+- `RefreshProperties()`: 기존 `obs_properties_t`에서 위젯 재빌드 (lightweight)
+- `ReloadProperties()`: `get_properties()` 재호출 (heavyweight)
+- 버튼 클릭 콜백의 `return true`는 **RefreshProperties만** 트리거
+
+### 배운 것
+- OBS 버튼 콜백에서 텍스트를 바꾸려면 `obs_property_set_description()` 사용 필수
+- `get_properties()`에서 조건부로 텍스트를 설정하는 방식은 버튼 클릭 시 동작하지 않음
+- 이 패턴은 모든 OBS 플러그인의 버튼 토글에 공통 적용 (Speechmatics, ElevenLabs 동일)
 
 ---
 

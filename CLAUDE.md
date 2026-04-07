@@ -31,12 +31,13 @@ git tag x.x.x && git push origin x.x.x
 ## CI/CD
 - **Trigger**: Tag push only (`on.push.tags`). Main branch push does NOT trigger Actions.
 - **Builds**: macOS arm64 + x86_64 (cross-compile), Windows x64, Ubuntu x86_64
-- **Release**: Automatic draft release on valid semver tag (e.g., `0.1.1`)
+- **Release**: Automatic draft release on valid semver tag (e.g., `0.1.2`)
 - **Codesigning**: macOS arm64 only (requires Apple Developer secrets)
 
 ## Key Architecture Decisions
 - Single source file (`plugin-main.cpp`) - all plugin logic in one file
 - Uses OBS built-in text source (`text_ft2_source_v2` / `text_gdiplus`) for rendering
+- Button toggle: use `obs_property_set_description()` in callback (RefreshProperties doesn't re-call get_properties)
 - Audio: OBS float32 48kHz -> int16 16kHz downsampled -> WebSocket binary to Soniox
 - x86_64 macOS CI: Intel Homebrew OpenSSL at `/usr/local/opt/openssl@3`
 - `CMakeLists.txt` guards `OPENSSL_ROOT_DIR` with `NOT DEFINED CACHE{}` to prevent preset override
