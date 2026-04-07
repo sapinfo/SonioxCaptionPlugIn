@@ -18,8 +18,8 @@ add_library(${CMAKE_PROJECT_NAME} MODULE)
 # ─── 외부 라이브러리: WebSocket + JSON ───
 include(FetchContent)
 
-# macOS: Homebrew OpenSSL 경로 설정
-if(APPLE)
+# macOS: Homebrew OpenSSL 경로 설정 (preset에서 이미 설정된 경우 건너뜀)
+if(APPLE AND NOT DEFINED CACHE{OPENSSL_ROOT_DIR})
   execute_process(
     COMMAND brew --prefix openssl
     OUTPUT_VARIABLE OPENSSL_ROOT_DIR
