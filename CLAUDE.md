@@ -43,6 +43,7 @@ git tag x.x.x && git push origin x.x.x
 - `CMakeLists.txt` guards `OPENSSL_ROOT_DIR` with `NOT DEFINED CACHE{}` to prevent preset override
 - Font: `obs_properties_add_font()` for system font dialog (face/style/size in one `obs_data_t` object)
 - Text style properties passed through to internal text source (`color1/2`, `outline`, `drop_shadow`, `custom_width`, `word_wrap` for ft2; `color`, `extents`, `outline` for gdiplus)
+- Endpoint delay: Soniox `max_endpoint_delay_ms` (500-3000ms, default **500** in this plugin). Lower = faster caption finalize after speech pause. Below 500ms requires manual `{"type":"finalize"}` message — Soniox does not expose silence threshold or VAD sensitivity (semantic endpointing only)
 
 ## Important Conventions
 - Version in `buildspec.json` (single source of truth)

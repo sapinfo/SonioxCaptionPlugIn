@@ -487,6 +487,34 @@ if (data->captioning) {
 
 ---
 
+## Step 8.3: 엔드포인트 지연 조절 파라미터 (v0.1.4)
+
+### 문제
+기본 세팅에서 말을 멈춘 뒤 자막이 확정되기까지 **약 2초** 지연이 있음. 실시간 방송에서는 너무 길게 느껴짐.
+
+### Soniox API 조사
+Soniox STT는 전통적인 VAD 사일런스 threshold 방식이 아닌 **시맨틱 엔드포인팅**(억양·맥락·휴지 분석)을 사용. 튜닝 가능한 파라미터는 단 2개:
+
+| 파라미터 | 범위 | 기본값 | 설명 |
+|---|---|---|---|
+| `enable_endpoint_detection` | bool | false | 엔드포인트 감지 활성화 |
+| `max_endpoint_delay_ms` | 500~3000 | 2000 | 발화 종료 후 엔드포인트까지 최대 대기 시간 |
+
+사일런스 시간·VAD 민감도 등은 비공개. `max_endpoint_delay_ms`가 유일한 공식 응답성 조절 수단.
+
+### 해결
+- 구조체에 `max_endpoint_delay_ms{500}` 필드 추가 — 기본값을 Soniox 허용 최솟값인 **500ms**로 설정
+- `start_captioning` / `test_connection` WebSocket config에 파라미터 포함
+- OBS Properties에 `obs_properties_add_int_slider` 로 UI 노출 (500~3000ms, 50ms step)
+- 모든 진입 경로(hotkey, update, start/stop button)에서 settings 읽기
+
+### 배운 것
+- Soniox는 최솟값 500ms 아래로 내려갈 수 없음. 그보다 빠르게 확정하려면 `{"type":"finalize"}` 메시지를 수동 전송하는 것이 유일한 방법
+- 기본값을 2000 → 500으로 내리면 체감 응답 속도 4배 개선
+- OBS `obs_properties_add_int_slider`는 정수 슬라이더 UI (범위+스텝 지정 가능)
+
+---
+
 ## 빌드 치트시트
 
 ```bash

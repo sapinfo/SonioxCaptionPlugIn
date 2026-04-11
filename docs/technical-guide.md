@@ -5,7 +5,7 @@
 | Item | Detail |
 |------|--------|
 | Plugin Name | soniox-caption-obs |
-| Version | 0.1.2 |
+| Version | 0.1.4 |
 | Language | C++ (C++17) |
 | Build System | CMake 3.28+ |
 | OBS SDK | 31.1.1 |
@@ -21,6 +21,7 @@
 - Audio source selection (any OBS audio input)
 - CJK font support (Korean, Japanese, Chinese)
 - Configurable font size and language
+- Configurable endpoint delay (500-3000ms) for tuning caption finalize speed
 
 ## Project Structure
 
@@ -150,6 +151,7 @@ cmake --build --preset ubuntu-x86_64
   "num_channels": 1,
   "language_hints": ["ko"],
   "enable_endpoint_detection": true,
+  "max_endpoint_delay_ms": 500,
   "translation": {
     "type": "one_way",
     "target_language": "en"

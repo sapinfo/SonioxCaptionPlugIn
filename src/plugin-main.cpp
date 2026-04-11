@@ -56,6 +56,7 @@ struct soniox_caption_data {
 	std::string language{"ko"};
 	bool translate{false};
 	std::string target_lang{"en"};
+	int max_endpoint_delay_ms{500}; // Soniox: 500~3000 (default 500 = faster finalize)
 
 	// 텍스트 스타일
 	uint32_t color1{0xFFFFFFFF}; // ABGR (OBS 내부 포맷)
@@ -331,6 +332,7 @@ static void start_captioning(soniox_caption_data *data)
 			config["num_channels"] = 1;
 			config["language_hints"] = {lang};
 			config["enable_endpoint_detection"] = true;
+			config["max_endpoint_delay_ms"] = data->max_endpoint_delay_ms;
 
 			// 번역 활성화 시 Soniox 내장 번역 추가
 			if (data->translate && !data->target_lang.empty()) {
@@ -424,6 +426,7 @@ static void test_connection(soniox_caption_data *data)
 			config["audio_format"] = "auto";
 			config["language_hints"] = {lang};
 			config["enable_endpoint_detection"] = true;
+			config["max_endpoint_delay_ms"] = data->max_endpoint_delay_ms;
 			data->websocket->send(config.dump());
 			update_text_display(data, "Connected OK!");
 			obs_log(LOG_INFO, "Test connection: OK");
@@ -474,6 +477,7 @@ static void hotkey_toggle_caption(void *private_data, obs_hotkey_id, obs_hotkey_
 	data->audio_source_name = obs_data_get_string(settings, "audio_source");
 	data->translate = obs_data_get_bool(settings, "translate");
 	data->target_lang = obs_data_get_string(settings, "target_lang");
+	data->max_endpoint_delay_ms = (int)obs_data_get_int(settings, "max_endpoint_delay_ms");
 	obs_data_release(settings);
 
 	if (data->captioning)
@@ -552,6 +556,7 @@ static void soniox_caption_update(void *private_data, obs_data_t *settings)
 	data->audio_source_name = obs_data_get_string(settings, "audio_source");
 	data->translate = obs_data_get_bool(settings, "translate");
 	data->target_lang = obs_data_get_string(settings, "target_lang");
+	data->max_endpoint_delay_ms = (int)obs_data_get_int(settings, "max_endpoint_delay_ms");
 
 	// 텍스트 스타일
 	data->color1 = (uint32_t)obs_data_get_int(settings, "color1");
@@ -601,6 +606,7 @@ static bool on_start_stop_clicked(obs_properties_t *, obs_property_t *property, 
 	data->audio_source_name = obs_data_get_string(settings, "audio_source");
 	data->translate = obs_data_get_bool(settings, "translate");
 	data->target_lang = obs_data_get_string(settings, "target_lang");
+	data->max_endpoint_delay_ms = (int)obs_data_get_int(settings, "max_endpoint_delay_ms");
 	obs_data_release(settings);
 
 	if (data->captioning) {
@@ -668,6 +674,10 @@ static obs_properties_t *soniox_caption_get_properties(void *private_data)
 	obs_property_list_add_string(target, "French", "fr");
 	obs_property_list_add_string(target, "German", "de");
 
+	// 엔드포인트(사일런스) 감도: 낮을수록 더 빨리 캡션 확정
+	obs_properties_add_int_slider(props, "max_endpoint_delay_ms",
+				      "Endpoint Delay (ms)", 500, 3000, 50);
+
 	// ─── 텍스트 스타일 ───
 
 	// 폰트 선택 (시스템 폰트 다이얼로그)
@@ -701,6 +711,7 @@ static void soniox_caption_get_defaults(obs_data_t *settings)
 	obs_data_set_default_string(settings, "audio_source", "");
 	obs_data_set_default_bool(settings, "translate", false);
 	obs_data_set_default_string(settings, "target_lang", "en");
+	obs_data_set_default_int(settings, "max_endpoint_delay_ms", 500);
 
 	// 폰트 기본값 (obs_data_t 오브젝트)
 	obs_data_t *font_obj = obs_data_create();
