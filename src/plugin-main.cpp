@@ -54,9 +54,16 @@ struct soniox_caption_data {
 	int font_flags{0};
 	std::string api_key;
 	std::string language{"ko"};
-	bool translate{false};
+	std::string display_mode{"original"}; // "original" or "translation"
 	std::string target_lang{"en"};
 	int max_endpoint_delay_ms{500}; // Soniox: 500~3000 (default 500 = faster finalize)
+	int trans_reveal_speed{3};     // 번역 타이핑 속도 (자/초)
+
+	// 번역 reveal (타이핑 효과)
+	std::string trans_target;      // 번역 전체 텍스트 (목표)
+	size_t trans_reveal_len{0};    // 현재 공개된 바이트 수
+	float trans_reveal_accum{0.0f}; // 소수점 누적기
+	float trans_hold_remaining{0.0f}; // <end> 후 텍스트 유지 시간(초)
 
 	// 텍스트 스타일
 	uint32_t color1{0xFFFFFFFF}; // ABGR (OBS 내부 포맷)
@@ -199,7 +206,17 @@ static void handle_soniox_message(soniox_caption_data *data, const std::string &
 				data->final_buffer.clear();
 				data->final_trans_buffer.clear();
 				data->partial_text.clear();
-				update_text_display(data, "");
+				if (data->display_mode == "translation" && !data->trans_target.empty()) {
+					// 번역 모드: 남은 텍스트 즉시 전부 공개 후 2초 유지
+					data->trans_reveal_len = data->trans_target.size();
+					update_text_display(data, data->trans_target.c_str());
+					data->trans_hold_remaining = 2.0f;
+				} else {
+					data->trans_target.clear();
+					data->trans_reveal_len = 0;
+					data->trans_reveal_accum = 0.0f;
+					update_text_display(data, "");
+				}
 				continue;
 			}
 
@@ -226,24 +243,24 @@ static void handle_soniox_message(soniox_caption_data *data, const std::string &
 		if (!new_final_trans.empty())
 			data->final_trans_buffer += new_final_trans;
 
-		// 원문 표시
-		std::string display = data->final_buffer + non_final;
-		while (!display.empty() && display.front() == ' ')
-			display.erase(display.begin());
-
-		// 번역 표시 (활성화 시 줄바꿈으로 아래에 추가)
-		if (data->translate) {
-			std::string trans_display =
-				data->final_trans_buffer + non_final_trans;
-			while (!trans_display.empty() && trans_display.front() == ' ')
-				trans_display.erase(trans_display.begin());
-			if (!trans_display.empty())
-				display += "\n" + trans_display;
-		}
-
-		if (!display.empty()) {
-			data->partial_text = display;
-			update_text_display(data, display.c_str());
+		// 표시 모드에 따라 원문 또는 번역만 표시
+		if (data->display_mode == "translation") {
+			// 번역: target만 갱신, 실제 표시는 video_tick이 담당
+			std::string target = data->final_trans_buffer + non_final_trans;
+			while (!target.empty() && target.front() == ' ')
+				target.erase(target.begin());
+			data->trans_target = target;
+			// reveal_len이 target보다 크면 (non_final 교체로 줄어든 경우) 클램프
+			if (data->trans_reveal_len > data->trans_target.size())
+				data->trans_reveal_len = data->trans_target.size();
+		} else {
+			std::string display = data->final_buffer + non_final;
+			while (!display.empty() && display.front() == ' ')
+				display.erase(display.begin());
+			if (!display.empty()) {
+				data->partial_text = display;
+				update_text_display(data, display.c_str());
+			}
 		}
 
 	} catch (const std::exception &e) {
@@ -274,6 +291,9 @@ static void stop_captioning(soniox_caption_data *data)
 	}
 
 	data->stopping = false;
+	data->trans_target.clear();
+	data->trans_reveal_len = 0;
+	data->trans_reveal_accum = 0.0f;
 	update_text_display(data, "Soniox Captions Ready!");
 	obs_log(LOG_INFO, "Captioning stopped");
 }
@@ -334,8 +354,8 @@ static void start_captioning(soniox_caption_data *data)
 			config["enable_endpoint_detection"] = true;
 			config["max_endpoint_delay_ms"] = data->max_endpoint_delay_ms;
 
-			// 번역 활성화 시 Soniox 내장 번역 추가
-			if (data->translate && !data->target_lang.empty()) {
+			// 번역 모드일 때 Soniox 내장 번역 추가
+			if (data->display_mode == "translation" && !data->target_lang.empty()) {
 				config["translation"] = {
 					{"type", "one_way"},
 					{"target_language", data->target_lang}};
@@ -475,7 +495,7 @@ static void hotkey_toggle_caption(void *private_data, obs_hotkey_id, obs_hotkey_
 	data->api_key = obs_data_get_string(settings, "api_key");
 	data->language = obs_data_get_string(settings, "language");
 	data->audio_source_name = obs_data_get_string(settings, "audio_source");
-	data->translate = obs_data_get_bool(settings, "translate");
+	data->display_mode = obs_data_get_string(settings, "display_mode");
 	data->target_lang = obs_data_get_string(settings, "target_lang");
 	data->max_endpoint_delay_ms = (int)obs_data_get_int(settings, "max_endpoint_delay_ms");
 	obs_data_release(settings);
@@ -554,9 +574,10 @@ static void soniox_caption_update(void *private_data, obs_data_t *settings)
 	data->api_key = obs_data_get_string(settings, "api_key");
 	data->language = obs_data_get_string(settings, "language");
 	data->audio_source_name = obs_data_get_string(settings, "audio_source");
-	data->translate = obs_data_get_bool(settings, "translate");
+	data->display_mode = obs_data_get_string(settings, "display_mode");
 	data->target_lang = obs_data_get_string(settings, "target_lang");
 	data->max_endpoint_delay_ms = (int)obs_data_get_int(settings, "max_endpoint_delay_ms");
+	data->trans_reveal_speed = (int)obs_data_get_int(settings, "trans_reveal_speed");
 
 	// 텍스트 스타일
 	data->color1 = (uint32_t)obs_data_get_int(settings, "color1");
@@ -604,7 +625,7 @@ static bool on_start_stop_clicked(obs_properties_t *, obs_property_t *property, 
 	data->api_key = obs_data_get_string(settings, "api_key");
 	data->language = obs_data_get_string(settings, "language");
 	data->audio_source_name = obs_data_get_string(settings, "audio_source");
-	data->translate = obs_data_get_bool(settings, "translate");
+	data->display_mode = obs_data_get_string(settings, "display_mode");
 	data->target_lang = obs_data_get_string(settings, "target_lang");
 	data->max_endpoint_delay_ms = (int)obs_data_get_int(settings, "max_endpoint_delay_ms");
 	obs_data_release(settings);
@@ -660,8 +681,19 @@ static obs_properties_t *soniox_caption_get_properties(void *private_data)
 	obs_property_list_add_string(lang, "French", "fr");
 	obs_property_list_add_string(lang, "German", "de");
 
-	// 번역 옵션
-	obs_properties_add_bool(props, "translate", "Enable Translation");
+	// 표시 모드 (원문/번역 토글)
+	obs_property_t *mode = obs_properties_add_list(props, "display_mode", "Display Mode",
+						       OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
+	obs_property_list_add_string(mode, "Original", "original");
+	obs_property_list_add_string(mode, "Translation", "translation");
+	obs_property_set_modified_callback(mode, [](obs_properties_t *ps, obs_property_t *,
+						    obs_data_t *s) -> bool {
+		const char *dm = obs_data_get_string(s, "display_mode");
+		bool is_trans = dm && strcmp(dm, "translation") == 0;
+		obs_property_set_visible(obs_properties_get(ps, "target_lang"), is_trans);
+		obs_property_set_visible(obs_properties_get(ps, "trans_reveal_speed"), is_trans);
+		return true;
+	});
 
 	obs_property_t *target =
 		obs_properties_add_list(props, "target_lang", "Translate To", OBS_COMBO_TYPE_LIST,
@@ -673,6 +705,21 @@ static obs_properties_t *soniox_caption_get_properties(void *private_data)
 	obs_property_list_add_string(target, "Spanish", "es");
 	obs_property_list_add_string(target, "French", "fr");
 	obs_property_list_add_string(target, "German", "de");
+
+	// 번역 타이핑 속도
+	obs_property_t *reveal_speed = obs_properties_add_int(
+		props, "trans_reveal_speed", "Translation Typing Speed (chars/sec)", 1, 8, 1);
+	obs_property_set_long_description(reveal_speed,
+		"Translation text typing speed.\n"
+		"Lower = slower typewriter effect, Higher = faster.\n"
+		"Only applies when Display Mode is 'Translation'.");
+
+	// 초기 가시성: display_mode가 "translation"일 때만 target_lang, reveal_speed 표시
+	if (data) {
+		bool is_trans = data->display_mode == "translation";
+		obs_property_set_visible(target, is_trans);
+		obs_property_set_visible(reveal_speed, is_trans);
+	}
 
 	// 엔드포인트(사일런스) 감도: 낮을수록 더 빨리 캡션 확정
 	obs_properties_add_int_slider(props, "max_endpoint_delay_ms",
@@ -709,9 +756,10 @@ static void soniox_caption_get_defaults(obs_data_t *settings)
 	obs_data_set_default_string(settings, "api_key", "");
 	obs_data_set_default_string(settings, "language", "ko");
 	obs_data_set_default_string(settings, "audio_source", "");
-	obs_data_set_default_bool(settings, "translate", false);
+	obs_data_set_default_string(settings, "display_mode", "original");
 	obs_data_set_default_string(settings, "target_lang", "en");
 	obs_data_set_default_int(settings, "max_endpoint_delay_ms", 500);
+	obs_data_set_default_int(settings, "trans_reveal_speed", 3);
 
 	// 폰트 기본값 (obs_data_t 오브젝트)
 	obs_data_t *font_obj = obs_data_create();
@@ -747,6 +795,61 @@ static uint32_t soniox_caption_get_height(void *private_data)
 	return data->text_source ? obs_source_get_height(data->text_source) : 0;
 }
 
+// UTF-8 바이트 경계로 스냅 (멀티바이트 문자 중간에서 자르지 않도록)
+static size_t snap_utf8(const std::string &s, size_t pos)
+{
+	if (pos >= s.size())
+		return s.size();
+	// UTF-8 continuation byte (10xxxxxx)이면 다음 문자 시작까지 전진
+	while (pos < s.size() && (static_cast<unsigned char>(s[pos]) & 0xC0) == 0x80)
+		pos++;
+	return pos;
+}
+
+static void soniox_caption_video_tick(void *private_data, float seconds)
+{
+	auto *data = static_cast<soniox_caption_data *>(private_data);
+
+	if (data->display_mode != "translation")
+		return;
+
+	std::lock_guard<std::mutex> lock(data->text_mutex);
+
+	// <end> 후 홀드 타이머: 카운트다운 후 클리어
+	if (data->trans_hold_remaining > 0.0f) {
+		data->trans_hold_remaining -= seconds;
+		if (data->trans_hold_remaining <= 0.0f) {
+			data->trans_hold_remaining = 0.0f;
+			data->trans_target.clear();
+			data->trans_reveal_len = 0;
+			data->trans_reveal_accum = 0.0f;
+			update_text_display(data, "");
+		}
+		return;
+	}
+
+	if (data->trans_target.empty() || data->trans_reveal_len >= data->trans_target.size())
+		return;
+
+	float chars_per_second = static_cast<float>(data->trans_reveal_speed);
+	data->trans_reveal_accum += chars_per_second * seconds;
+	size_t advance = static_cast<size_t>(data->trans_reveal_accum);
+	if (advance == 0)
+		return;
+	data->trans_reveal_accum -= static_cast<float>(advance);
+
+	data->trans_reveal_len += advance;
+	if (data->trans_reveal_len > data->trans_target.size())
+		data->trans_reveal_len = data->trans_target.size();
+
+	// UTF-8 경계 보정
+	data->trans_reveal_len = snap_utf8(data->trans_target, data->trans_reveal_len);
+
+	std::string display = data->trans_target.substr(0, data->trans_reveal_len);
+	data->partial_text = display;
+	update_text_display(data, display.c_str());
+}
+
 static void soniox_caption_video_render(void *private_data, gs_effect_t *)
 {
 	auto *data = static_cast<soniox_caption_data *>(private_data);
@@ -770,6 +873,7 @@ bool obs_module_load(void)
 	soniox_caption_source_info.get_defaults = soniox_caption_get_defaults;
 	soniox_caption_source_info.get_width = soniox_caption_get_width;
 	soniox_caption_source_info.get_height = soniox_caption_get_height;
+	soniox_caption_source_info.video_tick = soniox_caption_video_tick;
 	soniox_caption_source_info.video_render = soniox_caption_video_render;
 
 	obs_register_source(&soniox_caption_source_info);
