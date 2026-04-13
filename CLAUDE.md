@@ -47,6 +47,7 @@ git tag x.x.x && git push origin x.x.x
 - Display mode: 3-mode toggle (`original` / `translation` / `both`). "Both" uses two independent private text sources (`text_source` for original, `text_source_trans` for translation), rendered stacked vertically via `gs_matrix_translate3f` in `video_render`
 - Translation committed protection: on `<end>` token, translation text is held for 1.5s (`committed_protect_until` via `std::chrono::steady_clock`) while partial updates from next utterance are ignored — prevents flickering (pattern borrowed from ELSTTv2 overlay)
 - Soniox translation tokens arrive in sentence-sized chunks (not word-by-word like STT). Client-side typing effects don't work well — committed protection is the better UX approach
+- Test connection: verifies WebSocket Open only, then immediately closes — no config/auth payload sent (connection success = server reachable)
 
 ## Important Conventions
 - Version in `buildspec.json` (single source of truth)

@@ -464,16 +464,9 @@ static void test_connection(soniox_caption_data *data)
 		switch (msg->type) {
 		case ix::WebSocketMessageType::Open: {
 			data->connected = true;
-			json config;
-			config["api_key"] = key;
-			config["model"] = "stt-rt-v4";
-			config["audio_format"] = "auto";
-			config["language_hints"] = {lang};
-			config["enable_endpoint_detection"] = true;
-			config["max_endpoint_delay_ms"] = data->max_endpoint_delay_ms;
-			data->websocket->send(config.dump());
 			update_text_display(data, "Connected OK!");
 			obs_log(LOG_INFO, "Test connection: OK");
+			data->websocket->stop();
 			break;
 		}
 		case ix::WebSocketMessageType::Message: {
