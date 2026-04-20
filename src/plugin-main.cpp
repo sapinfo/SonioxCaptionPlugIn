@@ -549,7 +549,8 @@ static void test_connection(soniox_caption_data *data)
 			// 자기 자신을 join → system_error → terminate → SIGABRT.
 			// detach된 별도 스레드로 위임하면 run 스레드가 이 콜백
 			// 리턴 후 자연스럽게 종료되고 join이 성공한다.
-			data->stopping = true;
+			// 주의: stopping 플래그는 세우지 않는다 — Close 콜백에서
+			// "Test: Disconnected" 메시지를 띄우려면 false여야 한다.
 			ix::WebSocket *ws = data->websocket.get();
 			std::thread([ws]() { ws->stop(); }).detach();
 			break;
