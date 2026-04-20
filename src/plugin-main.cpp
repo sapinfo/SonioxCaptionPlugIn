@@ -18,6 +18,7 @@
 #include <vector>
 #include <chrono>
 #include <sstream>
+#include <thread>
 
 using json = nlohmann::json;
 
@@ -543,7 +544,14 @@ static void test_connection(soniox_caption_data *data)
 			data->connected = true;
 			update_text_display(data, "Connected OK!");
 			obs_log(LOG_INFO, "Test connection: OK");
-			data->websocket->stop();
+			// stop()은 WebSocket run 스레드를 join한다. 이 콜백은 그
+			// run 스레드에서 실행 중이므로 여기서 직접 호출하면
+			// 자기 자신을 join → system_error → terminate → SIGABRT.
+			// detach된 별도 스레드로 위임하면 run 스레드가 이 콜백
+			// 리턴 후 자연스럽게 종료되고 join이 성공한다.
+			data->stopping = true;
+			ix::WebSocket *ws = data->websocket.get();
+			std::thread([ws]() { ws->stop(); }).detach();
 			break;
 		}
 		case ix::WebSocketMessageType::Message: {
