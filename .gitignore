@@ -28,3 +28,6 @@
 # Exclude CMake build number cache
 /cmake/.CMakeBuildNumber
 .env
+
+# Exclude superpowers skill working docs (plans, scratch)
+/docs/superpowers/
