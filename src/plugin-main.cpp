@@ -458,7 +458,7 @@ static void start_captioning(soniox_caption_data *data)
 
 			json config;
 			config["api_key"] = key;
-			config["model"] = "stt-rt-v4";
+			config["model"] = "stt-rt-v5";
 			config["audio_format"] = "pcm_s16le";
 			config["sample_rate"] = 16000;
 			config["num_channels"] = 1;
